@@ -82,7 +82,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Initiate Google login
-app.get("api/v1/auth/google", (req: Request, res: Response) => {
+app.get("/api/v1/auth/google", (req: Request, res: Response) => {
   logger.info("Starting Google authentication flow");
 
   // Build the callback URL based on the actual request
@@ -114,7 +114,7 @@ app.get("api/v1/auth/google", (req: Request, res: Response) => {
 });
 
 // Handle the callback from Keycloak
-app.get("api/v1/auth/google/callback", async (req: Request, res: Response) => {
+app.get("/api/v1/auth/google/callback", async (req: Request, res: Response) => {
   logger.info("Received callback from Keycloak");
 
   try {
@@ -131,7 +131,7 @@ app.get("api/v1/auth/google/callback", async (req: Request, res: Response) => {
     // Get the callback URL from session or reconstruct it
     const callbackUrl =
       req.session.callbackUrl ||
-      `${req.protocol}://${req.get("host")}/auth/google/callback`;
+      `${req.protocol}://${req.get("host")}/api/v1/auth/google/callback`;
 
     logger.debug(`Using callback URL for token exchange: ${callbackUrl}`);
 
@@ -188,7 +188,7 @@ app.get("api/v1/auth/google/callback", async (req: Request, res: Response) => {
     }
 
     // Redirect to success page
-    res.redirect("api/v1/auth/success");
+    res.redirect("/api/v1/auth/success");
   } catch (error) {
     logger.error(
       `Error in callback: ${
@@ -206,10 +206,10 @@ app.get("api/v1/auth/google/callback", async (req: Request, res: Response) => {
 });
 
 // Success page after authentication
-app.get("api/v1/auth/success", (req: Request, res: Response) => {
+app.get("/api/v1/auth/success", (req: Request, res: Response) => {
   if (!req.session.tokens) {
     logger.error("No tokens found in session");
-    return res.redirect("/auth/google");
+    return res.redirect("/api/v1/auth/google");
   }
 
   // Extract user info from the tokens
@@ -232,16 +232,16 @@ app.get("api/v1/auth/success", (req: Request, res: Response) => {
     <p>You have successfully authenticated with Google via Keycloak.</p>
     <h2>Your User Information:</h2>
     <pre>${JSON.stringify(userInfo, null, 2)}</pre>
-    <p><a href="api/v1/protected">Access Protected Resource</a></p>
+    <p><a href="/api/v1/protected">Access Protected Resource</a></p>
   `);
 });
 
 // Protected resource
-app.get("api/v1/protected", (req: Request, res: Response) => {
+app.get("/api/v1/protected", (req: Request, res: Response) => {
   // Check if the user is authenticated
   if (!req.session.tokens) {
     logger.warn("Attempt to access protected resource without authentication");
-    return res.redirect("/auth/google");
+    return res.redirect("/api/v1/auth/google");
   }
 
   // Extract user info from the tokens
@@ -267,12 +267,12 @@ app.get("api/v1/protected", (req: Request, res: Response) => {
     }</p>
     <h2>Your Access Token Information:</h2>
     <pre>${JSON.stringify(userInfo, null, 2)}</pre>
-    <p><a href="api/v1/auth/logout">Logout</a></p>
+    <p><a href="/api/v1/auth/logout">Logout</a></p>
   `);
 });
 
 // Direct logout implementation - handles both session cleanup and token revocation
-app.get("api/v1/auth/logout", async (req: Request, res: Response) => {
+app.get("/api/v1/auth/logout", async (req: Request, res: Response) => {
   logger.info("Processing direct logout request");
 
   try {
@@ -339,7 +339,7 @@ app.get("api/v1/auth/logout", async (req: Request, res: Response) => {
 });
 
 // Health check endpoint
-app.get("api/v1/health", (req: Request, res: Response) => {
+app.get("/api/v1/health", (req: Request, res: Response) => {
   res.json({
     status: "OK",
     keycloak: {
@@ -352,8 +352,8 @@ app.get("api/v1/health", (req: Request, res: Response) => {
 // Start server
 app.listen(PORT, () => {
   logger.info(`Server started on http://localhost:${PORT}`);
-  logger.info(`Google auth URL: http://localhost:${PORT}/auth/google`);
-  logger.info(`Protected resource: http://localhost:${PORT}/protected`);
+  logger.info(`Google auth URL: http://localhost:${PORT}/api/v1/auth/google`);
+  logger.info(`Protected resource: http://localhost:${PORT}/api/v1/protected`);
 });
 
 process.on("uncaughtException", (error) => {
