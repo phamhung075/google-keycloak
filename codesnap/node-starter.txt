@@ -1,0 +1,208 @@
+Project Directory: google-keycloak
+Total Files Analyzed: 4
+Total Size: 0.01 MB
+Date: 2025-04-01T12:07:04.323Z
+
+Token counts and costs by model:
+   GPT-3.5: 1.3K tokens → $0.0019
+   GPT-4:   1.3K tokens → $0.0389
+   Claude:  1.3K tokens → $0.0195
+   LLaMA 2: 1.4K tokens → $0.0029
+
+Directory structure:
+├── .env
+├── .gitignore
+├── package.json
+└── server.js
+
+================================================
+File: .env
+================================================
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=your-realm
+KEYCLOAK_CLIENT_ID=your-client-id
+KEYCLOAK_CLIENT_SECRET=your-client-secret
+SESSION_SECRET=your-session-secret
+
+================================================
+File: package.json
+================================================
+{
+  "name": "node-starter",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "keycloak-connect": "^22.0.5",
+    "winston": "^3.17.0"
+  }
+}
+
+
+================================================
+File: server.js
+================================================
+const express = require("express");
+const session = require("express-session");
+const KeycloakConnect = require("keycloak-connect");
+const dotenv = require("dotenv");
+const { createLogger, format, transports } = require("winston");
+
+// Configure environment variables
+dotenv.config();
+
+// Set up logger
+const logger = createLogger({
+  level: "debug",
+  format: format.combine(
+    format.timestamp(),
+    format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    new transports.Console(),
+    new transports.File({ filename: "keycloak-auth.log" }),
+  ],
+});
+
+// Initialize Express app
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Session configuration
+const memoryStore = new session.MemoryStore();
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "default-secret-change-me",
+    resave: false,
+    saveUninitialized: true,
+    store: memoryStore,
+  })
+);
+
+// Log environment variables (excluding secrets)
+logger.info(`KEYCLOAK_REALM: ${process.env.KEYCLOAK_REALM}`);
+logger.info(`KEYCLOAK_URL: ${process.env.KEYCLOAK_URL}`);
+logger.info(`KEYCLOAK_CLIENT_ID: ${process.env.KEYCLOAK_CLIENT_ID}`);
+
+// Keycloak configuration
+const keycloakConfig = {
+  realm: process.env.KEYCLOAK_REALM || "",
+  // Remove the /auth suffix for newer Keycloak versions (17+)
+  "auth-server-url": process.env.KEYCLOAK_URL || "",
+  "ssl-required": "external",
+  resource: process.env.KEYCLOAK_CLIENT_ID || "",
+  credentials: {
+    secret: process.env.KEYCLOAK_CLIENT_SECRET || "",
+  },
+  "confidential-port": 0,
+};
+
+// Initialize Keycloak
+const keycloak = new KeycloakConnect({ store: memoryStore }, keycloakConfig);
+
+// Debug middleware to log requests
+app.use((req, res, next) => {
+  logger.debug(`Request received: ${req.method} ${req.url}`);
+  next();
+});
+
+// Apply Keycloak middleware
+app.use(keycloak.middleware());
+
+// Google login - this should redirect to Keycloak's Google login page
+app.get("/auth/google", (req, res) => {
+  logger.info("Initiating Google authentication flow");
+  // Redirect to Keycloak's Google identity provider login
+  const redirectUrl = `${keycloakConfig["auth-server-url"]}/realms/${
+    keycloakConfig.realm
+  }/protocol/openid-connect/auth?client_id=${
+    keycloakConfig.resource
+  }&redirect_uri=${encodeURIComponent(
+    `${req.protocol}://${req.get("host")}/auth/google/callback`
+  )}&response_type=code&scope=openid&kc_idp_hint=google`;
+
+  logger.debug(`Redirecting to: ${redirectUrl}`);
+  res.redirect(redirectUrl);
+});
+
+// Callback endpoint for Google authentication
+app.get("/auth/google/callback", keycloak.protect(), (req, res) => {
+  logger.info("Google authentication callback received");
+  try {
+    if (req.kauth && req.kauth.grant) {
+      logger.info("Authentication successful");
+      const userInfo = req.kauth.grant.access_token.content;
+      logger.debug(`User info: ${JSON.stringify(userInfo)}`);
+      res.json({
+        message: "Authentication successful",
+        user: userInfo,
+      });
+    } else {
+      logger.error("No authentication grant found");
+      res.status(401).json({ error: "Authentication failed" });
+    }
+  } catch (error) {
+    logger.error(
+      `Error in callback: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Protected resource example
+app.get("/protected", keycloak.protect(), (req, res) => {
+  logger.info("Protected resource accessed");
+  try {
+    if (req.kauth && req.kauth.grant) {
+      res.json({
+        message: "This is a protected resource",
+        user: req.kauth.grant.access_token.content || {},
+      });
+    } else {
+      res.status(401).json({ error: "No authentication grant found" });
+    }
+  } catch (error) {
+    logger.error(
+      `Error accessing protected resource: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "OK" });
+});
+
+// Start server
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Google auth URL: http://localhost:${PORT}/auth/google`);
+  logger.info(`Protected resource: http://localhost:${PORT}/protected`);
+});
+
+// Error handling
+process.on("uncaughtException", (error) => {
+  logger.error(`Uncaught exception: ${error.message}`);
+  logger.error(error.stack || "");
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error(
+    `Unhandled rejection: ${
+      reason instanceof Error ? reason.message : String(reason)
+    }`
+  );
+});
+
