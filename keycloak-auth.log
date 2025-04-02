@@ -302,3 +302,19 @@
 2025-04-01T13:05:21.033Z info: Successfully obtained tokens
 2025-04-01T13:05:21.034Z info: User authenticated: daihung.pham@gmail.com
 2025-04-01T13:05:21.047Z debug: GET /auth/success
+2025-04-02T15:17:44.792Z info: Server started on http://localhost:5000
+2025-04-02T15:17:44.794Z info: Google auth URL: http://localhost:5000/auth/google
+2025-04-02T15:17:44.794Z info: Protected resource: http://localhost:5000/protected
+2025-04-02T15:17:48.619Z debug: GET /auth/google
+2025-04-02T15:17:48.619Z info: Starting Google authentication flow
+2025-04-02T15:17:48.620Z debug: Using callback URL: http://localhost:5000/auth/google/callback
+2025-04-02T15:17:48.620Z debug: Redirecting to: http://localhost:8080/realms/ofelwin/protocol/openid-connect/auth?client_id=ofelwin-backend-auth&redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Fauth%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+profile&kc_idp_hint=google
+2025-04-02T15:17:48.662Z debug: GET /auth/google/callback?session_state=1ca62588-766f-4e2c-8040-560c99763482&iss=http%3A%2F%2Flocalhost%3A8080%2Frealms%2Fofelwin&code=97d92f84-67d2-4a93-aaab-2f7eec143ca8.1ca62588-766f-4e2c-8040-560c99763482.82034467-2272-4a4f-b68b-d236fec8daa1
+2025-04-02T15:17:48.663Z info: Received callback from Keycloak
+2025-04-02T15:17:48.663Z debug: Received code: 97d92f84-67d2-4a93-aaab-2f7eec143ca8.1ca62588-766f-4e2c-8040-560c99763482.82034467-2272-4a4f-b68b-d236fec8daa1
+2025-04-02T15:17:48.664Z debug: Using callback URL for token exchange: http://localhost:5000/auth/google/callback
+2025-04-02T15:17:48.664Z debug: Token exchange URL: http://localhost:8080/realms/ofelwin/protocol/openid-connect/token
+2025-04-02T15:17:48.664Z debug: Parameters: client_id=ofelwin-backend-auth, redirect_uri=http://localhost:5000/auth/google/callback
+2025-04-02T15:17:48.699Z info: Successfully obtained tokens
+2025-04-02T15:17:48.699Z info: User authenticated: daihung.pham@gmail.com
+2025-04-02T15:17:48.708Z debug: GET /auth/success
